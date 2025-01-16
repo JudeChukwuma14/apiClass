@@ -79,52 +79,90 @@ const updateProduct = async (req, res) => {
   try {
     if (req.user) {
       const userId = req.user.id;
-      const check = await authSchema.findOne({ _id: userId });
-      if (check.role === "admin") {
+      const account = await authSchema.findOne({ _id: userId });
+
+      if (account.role === "admin") {
         const updateId = req.params.productId;
-        const checkProduct = await productSchema.findOne({productId:updateId});
-        console.log(checkProduct);
-        if (!checkProduct) {
+        const checkproduct = await productSchema.findOne({ _id: updateId });
+        if (!checkproduct) {
           return res
             .status(404)
-            .json({ message: "Product not found", success: false });
+            .json({ message: "Product does not exist !", success: false });
         }
-        const { title, description, price, category } = req.body;
+
+        const { title, description, price } = req.body;
         if (title) {
-          checkProduct.title = title;
+          checkproduct.title = title;
         }
+
         if (description) {
-          checkProduct.description = description;
+          checkproduct.description = description;
         }
         if (price) {
-          checkProduct.price = price;
+          checkproduct.price = price;
         }
-        if(category){
-          checkProduct.category = category;
-        }
-        await checkProduct.save();
-        return res.status(200).json({
-          message: "Product updated successfully",
-          success: true,
-        });
+        await checkproduct.save();
+        return res
+          .status(200)
+          .json({ message: "Product updated successfully", success: true});
       } else {
         return res.status(401).json({
-          message: "Access Denied, you are not an admin",
+          message: "Access denied, you are not and admin",
           success: false,
         });
       }
     } else {
-      return res.status(401).json({
-        message: "Access Denied, you are not logged in",
-        success: false,
-      });
+      return res
+        .status(401)
+        .json({ message: "You are not authorized", success: false });
     }
-  } catch (error) {
+  } catch (err) {
     return res.status(500).json({
-      message: "Error occured !",
+      message: "Error occured",
       success: false,
-      error: error.message,
+      error: err.message,
     });
   }
 };
-module.exports = { postProduct, updateProduct };
+
+const deleteProduct = async (req, res) => {
+  try {
+    if (req.user) {
+      const userId = req.user.id;
+      const account = await authSchema.findOne({ _id: userId });
+      if (account.role === "admin") {
+        const deleteId = req.params.productId;
+        const checkproduct = await productSchema.findOne({
+          _id: deleteId,
+        });
+        if (!checkproduct) {
+          return res
+            .status(404)
+            .json({ message: "Product does not exist !", success: false });
+        }
+
+        await productSchema.findOneAndDelete(checkproduct._id);
+        return res
+          .status(200)
+          .json({ message: "Product delete successfully", success: true });
+      } else {
+        return res.status(401).json({
+          message: "Access denied, you are not and admin",
+          success: false,
+        });
+      }
+    } else {
+      return res
+        .status(401)
+        .json({ message: "You are not authorized", success: false });
+    }
+  } catch (err) {
+    return res.status(500).json({
+      message: "Error occured",
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+module.exports = { postProduct, updateProduct, deleteProduct };

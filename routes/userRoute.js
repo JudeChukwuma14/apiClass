@@ -1,20 +1,19 @@
 const express = require("express");
-const { getText } = require("../controller/userController");
+const { getText, getPostedProducts } = require("../controller/userController");
 const {
   registerAccount,
   signinAccount,
 } = require("../controller/authcontroller");
 
 const { verifyToken } = require("../middleware/verifyToken");
-const { postProduct } = require("../controller/adminController");
-const addpost = require("../controller/add");
-const uploading = require("../config/multer");
+const { postProduct, updateProduct } = require("../controller/adminController");
 const router = express.Router();
 
 router.get("/send", getText);
+router.get("/getproduct", getPostedProducts)
 router.post("/signup", registerAccount);
 router.post("/signin", signinAccount);
-router.post("/product", verifyToken,uploading, postProduct);
-router.post("/products", verifyToken,uploading, addpost);
+router.patch("/update/:productId",verifyToken, updateProduct)
+router.post("/products", verifyToken, postProduct);
 
 module.exports = router;

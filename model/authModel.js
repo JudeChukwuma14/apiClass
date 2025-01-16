@@ -19,6 +19,12 @@ const accountSchema = new mongoose.Schema({
     enum: ["user", "admin"],
     default: "user",
   },
+  otp:{
+    type: String,
+  },
+  otpExpiry:{
+    type: Date,
+  },
   date: {
     type: Date,
     default: Date.now(),

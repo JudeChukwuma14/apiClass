@@ -3,6 +3,9 @@ const { getText, getPostedProducts } = require("../controller/userController");
 const {
   registerAccount,
   signinAccount,
+  forgetPassword,
+  verifyOtp,
+  resetPassword,
 } = require("../controller/authcontroller");
 
 const { verifyToken } = require("../middleware/verifyToken");
@@ -16,5 +19,8 @@ router.post("/signin", signinAccount);
 router.patch("/update/:productId",verifyToken, updateProduct)
 router.delete("/delete/:productId", verifyToken, deleteProduct);
 router.post("/products", verifyToken, postProduct);
+router.post("/forgetpassword", forgetPassword)
+router.post("/verrifyotp", verifyOtp)
+router.post("/resetpassword/:otp", resetPassword)
 
 module.exports = router;

@@ -1,4 +1,6 @@
+const MailSendig = require("../middleware/emaiSetup");
 const { createAccount, loginAccount } = require("../middleware/joivalidation");
+const otpGenerator = require("../middleware/otpgenerator");
 const authSchema = require("../model/authModel");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -76,5 +78,136 @@ const signinAccount = async (req, res) => {
     });
   }
 };
+const forgetPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res
+        .status(401)
+        .json({ message: "Email is required", success: false });
+    }
+    const checkEmail = await authSchema.findOne({ email: email });
+    if (!checkEmail) {
+      return res
+        .status(404)
+        .json({ message: "Email not found", success: false });
+    }
+    const otp = await otpGenerator(email);
+    checkEmail.otp = otp;
+    const date = new Date();
+    date.setMinutes(date.getMinutes() + 10);
+    checkEmail.otpExpiry = date;
 
-module.exports = { registerAccount, signinAccount };
+    const option = {
+      email: email,
+      subject: "Password Reset OTP",
+      message: `Your OTP is ${otp} \n OTP expires in 10 minutes`,
+    };
+    await MailSendig(option);
+    await checkEmail.save();
+    return res.status(200).json({
+      message: "OTP sent successfully check your email",
+      success: true,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Oops!!! an error occured",
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+const verifyOtp = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    if (!otp) {
+      return res
+        .status(401)
+        .json({ message: "OTP is required", success: false });
+    }
+    const checkOtp = await authSchema.findOne({ otp: otp });
+    if (!checkOtp) {
+      return res.status(404).json({ message: "Invalid OTP", success: false });
+    }
+    const date = new Date();
+    if (date >= checkOtp.otpExpiry) {
+      return res
+        .status(401)
+        .json({ message: "OTP has expired", success: false });
+    } else {
+      return res
+        .status(200)
+        .json({ message: "OTP verified successfully", success: true });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      message: "Oops!!! an error occured",
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const otp = req.params.otp;
+    if (!otp) {
+      return res.status(401).json({
+        message: "OTP is required, fail to reset password ",
+        success: false,
+      });
+    }
+    const { password, retypePassword } = req.body;
+    if (
+      !password ||
+      !retypePassword ||
+      password.trim() === "" ||
+      retypePassword.trim() === ""
+    ) {
+      return res.status(401).json({
+        message: "Please this field can not be empty",
+        success: false,
+      });
+    }
+    if (password !== retypePassword) {
+      return res
+        .status(401)
+        .json({ message: "Mismatch password", success: false });
+    }
+    const checkOtp = await authSchema.findOne({ otp: otp });
+    if (!checkOtp) {
+      return res.status(404).json({
+        message: "Invalid OTP, reset password failed",
+        success: false,
+      });
+    }
+    const date = new Date();
+    if (date >= checkOtp.otpExpiry) {
+      return res
+        .status(401)
+        .json({ message: "OTP has expired", success: false });
+    } else {
+      checkOtp.password = bcryptjs.hashSync(password, 10);
+      checkOtp.otp = "";
+      checkOtp.otpExpiry = "";
+      await checkOtp.save();
+      return res
+        .status(200)
+        .json({ message: "Password reset successfully", success: true });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      message: "Oops!!! an error occured",
+      success: false,
+      error: error.message,
+    });
+  }
+};
+module.exports = {
+  registerAccount,
+  signinAccount,
+  forgetPassword,
+  verifyOtp,
+  resetPassword,
+};
